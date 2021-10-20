@@ -9,7 +9,6 @@ import (
 	"errors"
 
 	enc "github.com/bahlo/sketches-go/ddsketch/encoding"
-	"github.com/bahlo/sketches-go/ddsketch/pb/sketchpb"
 )
 
 type Provider func() Store
@@ -64,25 +63,6 @@ type Store interface {
 	// It updates the provided []byte so that it starts immediately after the
 	// encoded bins.
 	DecodeAndMergeWith(b *[]byte, binEncodingMode enc.SubFlag) error
-}
-
-// FromProto returns an instance of DenseStore that contains the data in the provided protobuf representation.
-func FromProto(pb *sketchpb.Store) *DenseStore {
-	store := NewDenseStore()
-	MergeWithProto(store, pb)
-	return store
-}
-
-// MergeWithProto merges the distribution in a protobuf Store to an existing store.
-// - if called with an empty store, this simply populates the store with the distribution in the protobuf Store.
-// - if called with a non-empty store, this has the same outcome as deserializing the protobuf Store, then merging.
-func MergeWithProto(store Store, pb *sketchpb.Store) {
-	for idx, count := range pb.BinCounts {
-		store.AddWithCount(int(idx), count)
-	}
-	for idx, count := range pb.ContiguousBinCounts {
-		store.AddWithCount(idx+int(pb.ContiguousBinIndexOffset), count)
-	}
 }
 
 func DecodeAndMergeWith(s Store, b *[]byte, binEncodingMode enc.SubFlag) error {
