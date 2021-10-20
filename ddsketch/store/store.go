@@ -52,8 +52,6 @@ type Store interface {
 	MinIndex() (int, error)
 	TotalCount() float64
 	KeyAtRank(rank float64) int
-	MergeWith(store Store)
-	ToProto() *sketchpb.Store
 	// Reweight multiplies all values from the store by w, but keeps the same global distribution.
 	Reweight(w float64) error
 	// Encode encodes the bins of the store and appends its content to the

@@ -10,7 +10,6 @@ import (
 	"sort"
 
 	enc "github.com/bahlo/sketches-go/ddsketch/encoding"
-	"github.com/bahlo/sketches-go/ddsketch/pb/sketchpb"
 )
 
 const (
@@ -397,15 +396,6 @@ func (s *BufferedPaginatedStore) MergeWith(other Store) {
 	}
 }
 
-func (s *BufferedPaginatedStore) MergeWithProto(pb *sketchpb.Store) {
-	for index, count := range pb.BinCounts {
-		s.AddWithCount(int(index), count)
-	}
-	for indexOffset, count := range pb.ContiguousBinCounts {
-		s.AddWithCount(int(pb.ContiguousBinIndexOffset)+indexOffset, count)
-	}
-}
-
 func (s *BufferedPaginatedStore) Bins() <-chan Bin {
 	s.sortBuffer()
 	ch := make(chan Bin)
@@ -533,20 +523,6 @@ func (s *BufferedPaginatedStore) Clear() {
 		s.pages[i] = s.pages[i][:0]
 	}
 	s.minPageIndex = maxInt
-}
-
-func (s *BufferedPaginatedStore) ToProto() *sketchpb.Store {
-	if s.IsEmpty() {
-		return &sketchpb.Store{}
-	}
-	// FIXME: add heuristic to use contiguousBinCounts when cheaper.
-	binCounts := make(map[int32]float64)
-	for bin := range s.Bins() {
-		binCounts[int32(bin.index)] = bin.count
-	}
-	return &sketchpb.Store{
-		BinCounts: binCounts,
-	}
 }
 
 func (s *BufferedPaginatedStore) Reweight(w float64) error {

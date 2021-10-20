@@ -268,13 +268,7 @@ func (s *DDSketch) ForEach(f func(value, count float64) (stop bool)) {
 // Merges the other sketch into this one. After this operation, this sketch encodes the values that
 // were added to both this and the other sketches.
 func (s *DDSketch) MergeWith(other *DDSketch) error {
-	if !s.IndexMapping.Equals(other.IndexMapping) {
-		return errors.New("Cannot merge sketches with different index mappings.")
-	}
-	s.positiveValueStore.MergeWith(other.positiveValueStore)
-	s.negativeValueStore.MergeWith(other.negativeValueStore)
-	s.zeroCount += other.zeroCount
-	return nil
+	panic("No merging")
 }
 
 // Encode serializes the sketch and appends the serialized content to the provided []byte.

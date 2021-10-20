@@ -271,53 +271,9 @@ func TestAddIntFuzzy(t *testing.T) {
 	}
 }
 
-func TestMergeFuzzy(t *testing.T) {
-	numMerges := 3
-	maxNumAdds := 1000
-
-	random := rand.New(rand.NewSource(seed))
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			for i := 0; i < numTests; i++ {
-				bins := make([]Bin, 0)
-				store := testCase.newStore()
-				for j := 0; j < numMerges; j++ {
-					numValues := random.Intn(maxNumAdds)
-					tmpStore := testCase.newStore()
-					for k := 0; k < numValues; k++ {
-						bin := Bin{index: randomIndex(random), count: randomCount(random)}
-						bins = append(bins, bin)
-						tmpStore.AddBin(bin)
-					}
-					store.MergeWith(tmpStore)
-				}
-				normalizedBins := normalize(testCase.transformBins(bins))
-				testStore(t, store, normalizedBins)
-			}
-
-		})
-	}
-}
-
 func testStore(t *testing.T, store Store, normalizedBins []Bin) {
 	assertEncodeBins(t, store, normalizedBins)
-	testCopy(t, store, normalizedBins)
 	testEncodingDecoding(t, store, normalizedBins)
-}
-
-func testCopy(t *testing.T, store Store, normalizedBins []Bin) {
-	copy := store.Copy()
-	store.MergeWith(copy)
-	assertEncodeBins(t, copy, normalizedBins)
-	store.Clear()
-	assertEncodeBins(t, copy, normalizedBins)
-	assertEncodeBins(t, store, nil)
-	perm := rand.Perm(len(normalizedBins))
-	for _, i := range perm {
-		store.AddBin(normalizedBins[i])
-	}
-	assertEncodeBins(t, store, normalizedBins)
 }
 
 func testEncodingDecoding(t *testing.T, store Store, normalizedBins []Bin) {
@@ -863,37 +819,6 @@ func assertStoreBinsLogicallyEquivalent(t *testing.T, store1 Store, store2 Store
 	assertEncodeBins(t, store2, store1Bins)
 }
 
-func TestBufferPaginatedStoreSerialization(t *testing.T) {
-	nTests := 100
-	// Store indices are limited to the int32 range
-	var values []int32
-	f := fuzz.New().NilChance(0).NumElements(10, 1000)
-	for i := 0; i < nTests; i++ {
-		f.Fuzz(&values)
-		store := NewBufferedPaginatedStore()
-		for _, v := range values {
-			store.Add(int(v))
-		}
-		deserializedStore := NewBufferedPaginatedStore()
-		MergeWithProto(deserializedStore, store.ToProto())
-
-		// when serializing / deserializing, the "before" and "after" stores may not be exactly equal because some
-		// points may be stored in the buffer in one version, but stored in a page in the other. So to compare them to
-		// see if they are logically equivalent, check that their logical bins are equivalent, then compare other fields
-		assertStoreBinsLogicallyEquivalent(t, store, deserializedStore)
-
-		// clear fields that are allowed to differ and assert all other fields are equal
-		store.buffer = []int{}
-		deserializedStore.buffer = []int{}
-		store.pages = [][]float64{}
-		deserializedStore.pages = [][]float64{}
-		store.minPageIndex = 0
-		deserializedStore.minPageIndex = 0
-
-		assert.Equal(t, store, deserializedStore)
-	}
-}
-
 func TestBufferedPaginatedCompactionDensity(t *testing.T) {
 	{
 		store := NewBufferedPaginatedStore()
@@ -935,30 +860,6 @@ func TestBufferedPaginatedCompactionOutliers(t *testing.T) {
 		store.Add(6377)
 	}
 	assert.Equal(t, 4, len(store.buffer))
-}
-
-func TestBufferedPaginatedMergeWithProtoFuzzy(t *testing.T) {
-	numMerges := 3
-	maxNumAdds := 1000
-
-	random := rand.New(rand.NewSource(seed))
-
-	for i := 0; i < numTests; i++ {
-		bins := make([]Bin, 0)
-		store := NewBufferedPaginatedStore()
-		for j := 0; j < numMerges; j++ {
-			numValues := random.Intn(maxNumAdds)
-			tmpStore := NewBufferedPaginatedStore()
-			for k := 0; k < numValues; k++ {
-				bin := Bin{index: randomIndex(random), count: randomCount(random)}
-				bins = append(bins, bin)
-				tmpStore.AddBin(bin)
-			}
-			store.MergeWithProto(tmpStore.ToProto())
-		}
-		normalizedBins := normalize(bins)
-		testStore(t, store, normalizedBins)
-	}
 }
 
 func TestDecode(t *testing.T) {
