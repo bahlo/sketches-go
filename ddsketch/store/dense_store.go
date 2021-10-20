@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"math"
 
-	enc "github.com/DataDog/sketches-go/ddsketch/encoding"
-	"github.com/DataDog/sketches-go/ddsketch/pb/sketchpb"
+	enc "github.com/bahlo/sketches-go/ddsketch/encoding"
+	"github.com/bahlo/sketches-go/ddsketch/pb/sketchpb"
 )
 
 const (

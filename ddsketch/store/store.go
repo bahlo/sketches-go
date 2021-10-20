@@ -8,8 +8,8 @@ package store
 import (
 	"errors"
 
-	enc "github.com/DataDog/sketches-go/ddsketch/encoding"
-	"github.com/DataDog/sketches-go/ddsketch/pb/sketchpb"
+	enc "github.com/bahlo/sketches-go/ddsketch/encoding"
+	"github.com/bahlo/sketches-go/ddsketch/pb/sketchpb"
 )
 
 type Provider func() Store

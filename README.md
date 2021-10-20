@@ -21,7 +21,7 @@ belongs to one of the `m` bins kept by the sketch. For instance, If the values a
 ### Usage
 
 ```go
-import "github.com/DataDog/sketches-go/ddsketch"
+import "github.com/bahlo/sketches-go/ddsketch"
 
 relativeAccuracy := 0.01
 sketch := ddsketch.NewDefaultDDSketch(relativeAccuracy)
@@ -63,4 +63,4 @@ The quantiles are in `sketch` are still accurate to within `relativeAccuracy`.
 [1] Charles Masson and Jee E Rim and Homin K. Lee. DDSketch: A fast and fully-mergeable quantile sketch with 
 relative-error guarantees. PVLDB, 12(12): 2195-2205, 2019. (The code referenced in the paper, including our 
 implementation of the the Greenwald-Khanna (GK) algorithm, can be found at: 
-https://github.com/DataDog/sketches-go/releases/tag/v0.0.1 )
+https://github.com/bahlo/sketches-go/releases/tag/v0.0.1 )

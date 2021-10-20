@@ -8,7 +8,7 @@ package store
 import (
 	"math"
 
-	enc "github.com/DataDog/sketches-go/ddsketch/encoding"
+	enc "github.com/bahlo/sketches-go/ddsketch/encoding"
 )
 
 // CollapsingLowestDenseStore is a dynamically growing contiguous (non-sparse) store.

@@ -10,10 +10,10 @@ import (
 	"io"
 	"math"
 
-	enc "github.com/DataDog/sketches-go/ddsketch/encoding"
-	"github.com/DataDog/sketches-go/ddsketch/mapping"
-	"github.com/DataDog/sketches-go/ddsketch/stat"
-	"github.com/DataDog/sketches-go/ddsketch/store"
+	enc "github.com/bahlo/sketches-go/ddsketch/encoding"
+	"github.com/bahlo/sketches-go/ddsketch/mapping"
+	"github.com/bahlo/sketches-go/ddsketch/stat"
+	"github.com/bahlo/sketches-go/ddsketch/store"
 )
 
 var (

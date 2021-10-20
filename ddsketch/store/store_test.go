@@ -14,7 +14,7 @@ import (
 	"sort"
 	"testing"
 
-	enc "github.com/DataDog/sketches-go/ddsketch/encoding"
+	enc "github.com/bahlo/sketches-go/ddsketch/encoding"
 	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
 )
