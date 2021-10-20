@@ -12,7 +12,6 @@ import (
 	"math"
 
 	enc "github.com/bahlo/sketches-go/ddsketch/encoding"
-	"github.com/bahlo/sketches-go/ddsketch/pb/sketchpb"
 )
 
 const (
@@ -235,18 +234,6 @@ func (s *DenseStore) string() string {
 	}
 	buffer.WriteString(fmt.Sprintf("count: %v, offset: %d, minIndex: %d, maxIndex: %d}", s.count, s.offset, s.minIndex, s.maxIndex))
 	return buffer.String()
-}
-
-func (s *DenseStore) ToProto() *sketchpb.Store {
-	if s.IsEmpty() {
-		return &sketchpb.Store{ContiguousBinCounts: nil}
-	}
-	bins := make([]float64, s.maxIndex-s.minIndex+1)
-	copy(bins, s.bins[s.minIndex-s.offset:s.maxIndex-s.offset+1])
-	return &sketchpb.Store{
-		ContiguousBinCounts:      bins,
-		ContiguousBinIndexOffset: int32(s.minIndex),
-	}
 }
 
 func (s *DenseStore) Reweight(w float64) error {

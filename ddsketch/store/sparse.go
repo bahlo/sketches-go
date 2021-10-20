@@ -10,7 +10,6 @@ import (
 	"sort"
 
 	enc "github.com/bahlo/sketches-go/ddsketch/encoding"
-	"github.com/bahlo/sketches-go/ddsketch/pb/sketchpb"
 )
 
 type SparseStore struct {
@@ -139,14 +138,6 @@ func (s *SparseStore) MergeWith(store Store) {
 	for bin := range store.Bins() {
 		s.AddBin(bin)
 	}
-}
-
-func (s *SparseStore) ToProto() *sketchpb.Store {
-	binCounts := make(map[int32]float64)
-	for index, count := range s.counts {
-		binCounts[int32(index)] = count
-	}
-	return &sketchpb.Store{BinCounts: binCounts}
 }
 
 func (s *SparseStore) Reweight(w float64) error {

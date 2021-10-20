@@ -764,51 +764,6 @@ func AssertDenseStoresEqual(t *testing.T, store DenseStore, other DenseStore) {
 	)
 }
 
-func TestDenseStoreSerialization(t *testing.T) {
-	nTests := 100
-	// Store indices are limited to the int32 range
-	var values []int32
-	f := fuzz.New().NilChance(0).NumElements(10, 1000)
-	for i := 0; i < nTests; i++ {
-		f.Fuzz(&values)
-		for _, maxNumBins := range testMaxNumBins {
-			storeLow := NewCollapsingLowestDenseStore(maxNumBins)
-			storeHigh := NewCollapsingHighestDenseStore(maxNumBins)
-			for _, v := range values {
-				storeLow.Add(int(v))
-				storeHigh.Add(int(v))
-			}
-			deserializedStoreLow := FromProto(storeLow.ToProto())
-			AssertDenseStoresEqual(t, storeLow.DenseStore, *deserializedStoreLow)
-			//			EvaluateCollapsingLowestStore(t, deserializedStoreLow, values)
-			// Store does not change after serializing
-			assert.Equal(t, storeLow.maxNumBins, maxNumBins)
-			deserializedStoreHigh := FromProto(storeHigh.ToProto())
-			AssertDenseStoresEqual(t, storeHigh.DenseStore, *deserializedStoreHigh)
-			//EvaluateCollapsingHighestStore(t, deserializedStoreHigh, values)
-			// Store does not change after serializing
-			assert.Equal(t, storeHigh.maxNumBins, maxNumBins)
-		}
-	}
-}
-
-func TestSparseStoreSerialization(t *testing.T) {
-	nTests := 100
-	// Store indices are limited to the int32 range
-	var values []int32
-	f := fuzz.New().NilChance(0).NumElements(10, 1000)
-	for i := 0; i < nTests; i++ {
-		f.Fuzz(&values)
-		store := NewSparseStore()
-		for _, v := range values {
-			store.Add(int(v))
-		}
-		deserializedStore := NewSparseStore()
-		MergeWithProto(deserializedStore, store.ToProto())
-		assert.Equal(t, store, deserializedStore)
-	}
-}
-
 func assertStoreBinsLogicallyEquivalent(t *testing.T, store1 Store, store2 Store) {
 	store1Bins := make([]Bin, 0)
 	store1.ForEach(func(index int, count float64) bool {
