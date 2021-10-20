@@ -12,7 +12,6 @@ import (
 	"math"
 
 	enc "github.com/bahlo/sketches-go/ddsketch/encoding"
-	"github.com/bahlo/sketches-go/ddsketch/pb/sketchpb"
 )
 
 // An IndexMapping that is memory-optimal, that is to say that given a targeted relative accuracy, it
@@ -93,15 +92,6 @@ func (m *LogarithmicMapping) RelativeAccuracy() float64 {
 
 func (m *LogarithmicMapping) gamma() float64 {
 	return (1 + m.relativeAccuracy) / (1 - m.relativeAccuracy)
-}
-
-// Generates a protobuf representation of this LogarithicMapping.
-func (m *LogarithmicMapping) ToProto() *sketchpb.IndexMapping {
-	return &sketchpb.IndexMapping{
-		Gamma:         m.gamma(),
-		IndexOffset:   m.normalizedIndexOffset,
-		Interpolation: sketchpb.IndexMapping_NONE,
-	}
 }
 
 func (m *LogarithmicMapping) Encode(b *[]byte) {

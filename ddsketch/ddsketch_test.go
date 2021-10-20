@@ -12,10 +12,8 @@ import (
 
 	"github.com/bahlo/sketches-go/dataset"
 	"github.com/bahlo/sketches-go/ddsketch/mapping"
-	"github.com/bahlo/sketches-go/ddsketch/pb/sketchpb"
 	"github.com/bahlo/sketches-go/ddsketch/store"
 
-	"github.com/golang/protobuf/proto"
 	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
 )
@@ -106,33 +104,6 @@ func evaluateSketch(t *testing.T, n int, gen dataset.Generator, sketch quantileS
 		data.Add(-value)
 	}
 	assertSketchesAccurate(t, data, sketch, testCase.exactSummaryStatistics)
-
-	// for each store type, serialize / deserialize the sketch into a sketch with that store type, and check that new sketch is still accurate
-	assertDeserializedSketchAccurate(t, sketch, store.DenseStoreConstructor, data, testCase)
-	assertDeserializedSketchAccurate(t, sketch, store.BufferedPaginatedStoreConstructor, data, testCase)
-	assertDeserializedSketchAccurate(t, sketch, store.SparseStoreConstructor, data, testCase)
-}
-
-// makes sure that if we serialize and deserialize a sketch, it will still be accurate
-func assertDeserializedSketchAccurate(t *testing.T, sketch quantileSketch, storeProvider store.Provider, data *dataset.Dataset, testCase testCase) {
-	encoded := &[]byte{}
-	sketch.Encode(encoded, false)
-	decoded, err := testCase.decode(*encoded)
-	assert.Nil(t, err)
-	assertSketchesAccurate(t, data, decoded, testCase.exactSummaryStatistics)
-
-	s, ok := sketch.(*DDSketch)
-	if !ok {
-		return
-	}
-	serialized, err := proto.Marshal(s.ToProto())
-	assert.Nil(t, err)
-	var sketchPb sketchpb.DDSketch
-	err = proto.Unmarshal(serialized, &sketchPb)
-	assert.Nil(t, err)
-	deserializedSketch, err := FromProtoWithStoreProvider(&sketchPb, storeProvider)
-	assert.Nil(t, err)
-	assertSketchesAccurate(t, data, deserializedSketch, false)
 }
 
 func assertSketchesAccurate(t *testing.T, data *dataset.Dataset, sketch quantileSketch, exactSummaryStatistics bool) {
@@ -459,57 +430,6 @@ func TestForEach(t *testing.T) {
 	}
 }
 
-func TestDecodingErrors(t *testing.T) {
-	mapping1, _ := mapping.NewCubicallyInterpolatedMappingWithGamma(1.02, 0)
-	mapping2, _ := mapping.NewCubicallyInterpolatedMappingWithGamma(1.04, 0)
-	storeProvider := store.BufferedPaginatedStoreConstructor
-	{
-		decoded, err := DecodeDDSketch([]byte{}, storeProvider, mapping1)
-		assert.Nil(t, err)
-		assert.True(t, decoded.IsEmpty())
-	}
-	{
-		_, err := DecodeDDSketch([]byte{}, storeProvider, nil)
-		assert.Error(t, err)
-	}
-	{
-		encoded := &[]byte{}
-		mapping2.Encode(encoded)
-		_, err := DecodeDDSketch(*encoded, storeProvider, nil)
-		assert.Nil(t, err)
-	}
-	{
-		sketch := NewDDSketchFromStoreProvider(mapping1, storeProvider)
-		encoded := &[]byte{}
-		err := sketch.DecodeAndMergeWith(*encoded)
-		assert.Nil(t, err)
-	}
-	{
-		sketch := NewDDSketchFromStoreProvider(mapping1, storeProvider)
-		encoded := &[]byte{}
-		mapping2.Encode(encoded)
-		err := sketch.DecodeAndMergeWith(*encoded)
-		assert.Error(t, err)
-	}
-	{ // with exact summary statistics -> without exact summary statistics (valid)
-		sketch := NewDDSketchWithExactSummaryStatistics(mapping1, storeProvider)
-		sketch.Add(0)
-		encoded := &[]byte{}
-		sketch.Encode(encoded, false)
-		decoded, err := DecodeDDSketchWithExactSummaryStatistics(*encoded, storeProvider, nil)
-		assert.Nil(t, err)
-		assert.Equal(t, 1.0, decoded.GetCount())
-	}
-	{ // without exact summary statistics -> with exact summary statistics (error)
-		sketch := NewDDSketchFromStoreProvider(mapping1, storeProvider)
-		sketch.Add(0)
-		encoded := &[]byte{}
-		sketch.Encode(encoded, false)
-		_, err := DecodeDDSketchWithExactSummaryStatistics(*encoded, storeProvider, nil)
-		assert.NotNil(t, err)
-	}
-}
-
 type sketchDataTestCase struct {
 	name          string
 	indexMapping  mapping.IndexMapping
@@ -671,86 +591,6 @@ var (
 	}
 )
 
-func TestBenchmarkEncodedSize(t *testing.T) {
-	t.Logf("%-45s %6s %6s %17s\n", "test case", "proto", "custom", "custom_no_mapping")
-	for _, testCase := range dataTestCases {
-		sketch := NewDDSketchFromStoreProvider(testCase.indexMapping, testCase.storeProvider)
-		testCase.fillSketch(*sketch)
-		encoded := make([]byte, 0)
-		sketch.Encode(&encoded, false)
-		encodedWithoutIndexMapping := make([]byte, 0)
-		sketch.Encode(&encodedWithoutIndexMapping, true)
-		protoSerialized, _ := proto.Marshal(sketch.ToProto())
-		t.Logf("%-45s %6d %6d %17d\n", testCase.name, len(protoSerialized), len(encoded), len(encodedWithoutIndexMapping))
-	}
-}
-
-type serTestCase struct {
-	name  string
-	ser   func(s *DDSketch, b *[]byte)
-	deser func(b []byte, s *DDSketch, p store.Provider)
-}
-
-var serTestCases []serTestCase = []serTestCase{
-	{
-		name: "proto",
-		ser: func(s *DDSketch, b *[]byte) {
-			serialized, _ := proto.Marshal(s.ToProto())
-			*b = serialized
-		},
-		deser: func(b []byte, s *DDSketch, p store.Provider) {
-			var sketchPb sketchpb.DDSketch
-			proto.Unmarshal(b, &sketchPb)
-
-			serialized, _ := FromProtoWithStoreProvider(&sketchPb, p)
-			*s = *serialized
-		},
-	},
-	{
-		name: "custom",
-		ser: func(s *DDSketch, b *[]byte) {
-			*b = []byte{}
-			s.Encode(b, false)
-		},
-		deser: func(b []byte, s *DDSketch, p store.Provider) {
-			sketch, _ := DecodeDDSketch(b, p, nil)
-			*s = *sketch
-		},
-	},
-	{
-		name: "custom_reusing",
-		ser: func(s *DDSketch, b *[]byte) {
-			*b = (*b)[:0]
-			s.Encode(b, false)
-		},
-		deser: func(b []byte, s *DDSketch, p store.Provider) {
-			s.Clear()
-			s.DecodeAndMergeWith(b)
-		},
-	},
-}
-
-func TestSerDeser(t *testing.T) {
-	storeProviders := []store.Provider{
-		store.BufferedPaginatedStoreConstructor,
-		store.DenseStoreConstructor,
-		store.SparseStoreConstructor,
-	}
-	for _, testCase := range dataTestCases {
-		sketch := NewDDSketchFromStoreProvider(testCase.indexMapping, testCase.storeProvider)
-		testCase.fillSketch(*sketch)
-		for _, serTestCase := range serTestCases {
-			var serialized []byte
-			serTestCase.ser(sketch, &serialized)
-			for _, storeProvider := range storeProviders {
-				deserialized := NewDDSketchFromStoreProvider(sketch.IndexMapping, storeProvider)
-				serTestCase.deser(serialized, deserialized, storeProvider)
-				assertSketchesEquivalent(t, sketch, deserialized)
-			}
-		}
-	}
-}
-
 func assertSketchesEquivalent(t *testing.T, s1 *DDSketch, s2 *DDSketch) {
 	assert.Equal(t, s1.IsEmpty(), s2.IsEmpty())
 	if s1.IsEmpty() {
@@ -813,43 +653,6 @@ func BenchmarkAdd(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				sinkSketch.Add(rand.ExpFloat64())
-			}
-		})
-	}
-}
-
-func BenchmarkEncode(b *testing.B) {
-	for _, testCase := range dataTestCases {
-		b.Run(testCase.name, func(b *testing.B) {
-			sketch := NewDDSketchFromStoreProvider(testCase.indexMapping, testCase.storeProvider)
-			testCase.fillSketch(*sketch)
-			for _, sTestCase := range serTestCases {
-				b.Run(sTestCase.name, func(b *testing.B) {
-					b.ResetTimer()
-					for i := 0; i < b.N; i++ {
-						sTestCase.ser(sketch, &sinkBytes)
-					}
-				})
-			}
-		})
-	}
-}
-
-func BenchmarkDecode(b *testing.B) {
-	for _, testCase := range dataTestCases {
-		b.Run(testCase.name, func(b *testing.B) {
-			sketch := NewDDSketchFromStoreProvider(testCase.indexMapping, testCase.storeProvider)
-			testCase.fillSketch(*sketch)
-			for _, sTestCase := range serTestCases {
-				var encoded []byte
-				sTestCase.ser(sketch, &encoded)
-				b.Run(sTestCase.name, func(b *testing.B) {
-					sinkSketch = NewDDSketchFromStoreProvider(testCase.indexMapping, testCase.storeProvider)
-					b.ResetTimer()
-					for i := 0; i < b.N; i++ {
-						sTestCase.deser(encoded, sinkSketch, testCase.storeProvider)
-					}
-				})
 			}
 		})
 	}

@@ -100,10 +100,3 @@ func TestLowerBound(t *testing.T) {
 		}
 	}
 }
-
-func TestSerialization(t *testing.T) {
-	m, _ := NewCubicallyInterpolatedMapping(1e-2)
-	deserializedMapping, err := FromProto(m.ToProto())
-	assert.Nil(t, err)
-	assert.True(t, m.Equals(deserializedMapping))
-}

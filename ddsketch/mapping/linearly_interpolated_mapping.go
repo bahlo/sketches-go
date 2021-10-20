@@ -12,7 +12,6 @@ import (
 	"math"
 
 	enc "github.com/bahlo/sketches-go/ddsketch/encoding"
-	"github.com/bahlo/sketches-go/ddsketch/pb/sketchpb"
 )
 
 // A fast IndexMapping that approximates the memory-optimal LogarithmicMapping by extracting the floor value
@@ -105,15 +104,6 @@ func (m *LinearlyInterpolatedMapping) RelativeAccuracy() float64 {
 
 func (m *LinearlyInterpolatedMapping) gamma() float64 {
 	return math.Exp2(1 / m.multiplier)
-}
-
-// Generates a protobuf representation of this LinearlyInterpolatedMapping.
-func (m *LinearlyInterpolatedMapping) ToProto() *sketchpb.IndexMapping {
-	return &sketchpb.IndexMapping{
-		Gamma:         m.gamma(),
-		IndexOffset:   m.normalizedIndexOffset + m.approximateLog(1)*m.multiplier,
-		Interpolation: sketchpb.IndexMapping_LINEAR,
-	}
 }
 
 func (m *LinearlyInterpolatedMapping) Encode(b *[]byte) {

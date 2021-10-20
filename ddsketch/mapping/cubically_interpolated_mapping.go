@@ -10,9 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-
-	enc "github.com/bahlo/sketches-go/ddsketch/encoding"
-	"github.com/bahlo/sketches-go/ddsketch/pb/sketchpb"
 )
 
 const (
@@ -121,24 +118,8 @@ func (m *CubicallyInterpolatedMapping) gamma() float64 {
 	return math.Exp2(1 / m.multiplier)
 }
 
-func (m *CubicallyInterpolatedMapping) ToProto() *sketchpb.IndexMapping {
-	return &sketchpb.IndexMapping{
-		Gamma:         m.gamma(),
-		IndexOffset:   m.normalizedIndexOffset + m.approximateLog(1)*m.multiplier,
-		Interpolation: sketchpb.IndexMapping_CUBIC,
-	}
-}
-
-func (m *CubicallyInterpolatedMapping) Encode(b *[]byte) {
-	enc.EncodeFlag(b, enc.FlagIndexMappingBaseCubic)
-	enc.EncodeFloat64LE(b, m.gamma())
-	enc.EncodeFloat64LE(b, m.normalizedIndexOffset)
-}
-
 func (m *CubicallyInterpolatedMapping) string() string {
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf("relativeAccuracy: %v, multiplier: %v, normalizedIndexOffset: %v\n", m.relativeAccuracy, m.multiplier, m.normalizedIndexOffset))
 	return buffer.String()
 }
-
-var _ IndexMapping = (*CubicallyInterpolatedMapping)(nil)

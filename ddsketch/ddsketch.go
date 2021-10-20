@@ -288,7 +288,7 @@ func (s *DDSketch) Encode(b *[]byte, omitIndexMapping bool) {
 	}
 
 	if !omitIndexMapping {
-		s.IndexMapping.Encode(b)
+		panic("No index mapping encoding")
 	}
 
 	s.positiveValueStore.Encode(b, enc.FlagTypePositiveStore)
