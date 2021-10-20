@@ -12,7 +12,6 @@ import (
 
 	enc "github.com/DataDog/sketches-go/ddsketch/encoding"
 	"github.com/DataDog/sketches-go/ddsketch/mapping"
-	"github.com/DataDog/sketches-go/ddsketch/pb/sketchpb"
 	"github.com/DataDog/sketches-go/ddsketch/stat"
 	"github.com/DataDog/sketches-go/ddsketch/store"
 )
@@ -276,40 +275,6 @@ func (s *DDSketch) MergeWith(other *DDSketch) error {
 	s.negativeValueStore.MergeWith(other.negativeValueStore)
 	s.zeroCount += other.zeroCount
 	return nil
-}
-
-// Generates a protobuf representation of this DDSketch.
-func (s *DDSketch) ToProto() *sketchpb.DDSketch {
-	return &sketchpb.DDSketch{
-		Mapping:        s.IndexMapping.ToProto(),
-		PositiveValues: s.positiveValueStore.ToProto(),
-		NegativeValues: s.negativeValueStore.ToProto(),
-		ZeroCount:      s.zeroCount,
-	}
-}
-
-// FromProto builds a new instance of DDSketch based on the provided protobuf representation, using a Dense store.
-func FromProto(pb *sketchpb.DDSketch) (*DDSketch, error) {
-	return FromProtoWithStoreProvider(pb, store.DenseStoreConstructor)
-}
-
-func FromProtoWithStoreProvider(pb *sketchpb.DDSketch, storeProvider store.Provider) (*DDSketch, error) {
-	positiveValueStore := storeProvider()
-	store.MergeWithProto(positiveValueStore, pb.PositiveValues)
-	negativeValueStore := storeProvider()
-	store.MergeWithProto(negativeValueStore, pb.NegativeValues)
-	m, err := mapping.FromProto(pb.Mapping)
-	if err != nil {
-		return nil, err
-	}
-	return &DDSketch{
-		IndexMapping:              m,
-		positiveValueStore:        positiveValueStore,
-		negativeValueStore:        negativeValueStore,
-		zeroCount:                 pb.ZeroCount,
-		minIndexableAbsoluteValue: m.MinIndexableValue(),
-		maxIndexableValue:         m.MaxIndexableValue(),
-	}, nil
 }
 
 // Encode serializes the sketch and appends the serialized content to the provided []byte.
